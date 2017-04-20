@@ -19,7 +19,7 @@ from AIPlayerUtils import *
 #
 # Due Date: April 24th, 2017
 #
-# Description: 
+# Description:
 ##
 
 ##
@@ -95,7 +95,8 @@ class AIPlayer(Player):
     def rewardAgent(self, state):
        return 0
 
-
+    def TD_0(self, state, alpha, gamma, numOfEpisodes):
+        return 0
     ##
     # getPlacement
     #
