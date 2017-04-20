@@ -43,6 +43,58 @@ class AIPlayer(Player):
         # Variables to store our tunnel and anthill
         self.myTunnel = None
         self.myAnthill = None
+        self.STATE_FILE = "states_hathaway19_webber18.csv"
+        self.DF = 0.8
+        self.alpha = 0.99
+        self.greedy = 0.01
+
+        # State memory
+        self.stateMem = []
+
+        # Load games from our file
+        self.loadStates()
+
+
+    ###
+    #   consolidateState
+    #
+    #   Description:
+    #       Strips a gamestate object of important information and returns a new, consolidated state object
+    ###
+    def consolidateState(self, state):
+        return 0
+
+
+    ###
+    #   loadStates
+    #
+    #   Description:
+    #       loads any existing states into our memory
+    ###
+    def loadStates(self):
+        return 0
+
+
+    ###
+    #   saveStates
+    #
+    #   Description:
+    #       saves any states in our memory to our file
+    ###
+    def saveStates(self):
+        return 0
+
+
+    ###
+    #   rewardAgent
+    #
+    #   Description:
+    #       Given a state, sets the reward for the agent of that state
+    #       +1 for winning | -1 for losing | -0.001 for everything else
+    ###
+    def rewardAgent(self, state):
+       return 0
+
 
     ##
     # getPlacement
@@ -309,3 +361,17 @@ def calcAntMove(currentState, antToMove, endDestination, amountOfMovement):
                 break
     # Returns the path for the ant to take
     return path
+
+
+
+###
+#   smallState
+#
+#   Descriptioin:
+#       Represents a consolidated state
+###
+class smallState():
+
+    def __init__(self):
+        return 0
+
