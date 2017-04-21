@@ -55,6 +55,10 @@ class AIPlayer(Player):
         # Load games from our file
         self.loadStates()
 
+        # Load are existing states if the file exists
+        # if filePath.isfile(self.STATE_FILE):
+        #     self.loadStates()
+
 
     ###
     #   consolidateState
@@ -120,6 +124,8 @@ class AIPlayer(Player):
     ###
     def loadStates(self):
         return 0
+        # with open(self.STATE_FILE, 'rb') as file:
+        #     print "dfdf"
 
 
     ###
