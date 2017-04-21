@@ -200,7 +200,18 @@ class AIPlayer(Player):
        return 0
 
     # Updated upstream
-    def TD_0(self, state, alpha, gamma, numOfEpisodes):
+    def TD_0(self, state, alpha, gamma, numOfEpisodes=1000):
+        observation = "stuff"
+        for episode in range(numOfEpisodes):
+            actionTaken = "stuff"
+            newObservation = "stuff"
+            reward = "blah"
+
+            #Todo: call method to update utility
+
+            observation = newObservation
+            if done:
+                break
         return 0
 
 
