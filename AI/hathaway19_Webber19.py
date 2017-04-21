@@ -55,6 +55,8 @@ class AIPlayer(Player):
         # Load games from our file
         self.loadStates()
 
+        self.utilityArray = []
+
         # Load are existing states if the file exists
         # if filePath.isfile(self.STATE_FILE):
         #     self.loadStates()
@@ -220,7 +222,10 @@ class AIPlayer(Player):
     #
     #   Description:
     #       Adjusts the previous
-    def adjustUtilities(self):
+    def adjustUtilities(self, observation, newObservation, reward, alpha, gamma):
+        oldUtility = "stuff"
+        newUtility = "stuff"
+
         return 0
 
 
