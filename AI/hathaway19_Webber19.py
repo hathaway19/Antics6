@@ -1,6 +1,7 @@
 # -*- coding: latin-1 -*-
 import random
 import sys
+import xml.etree.ElementTree as ET
 
 sys.path.append("..")  # so other modules can be found in parent dir
 from Player import *
@@ -43,7 +44,7 @@ class AIPlayer(Player):
         # Variables to store our tunnel and anthill
         self.myTunnel = None
         self.myAnthill = None
-        self.STATE_FILE = "states_hathaway19_webber18.csv"
+        self.STATE_FILE = "states_hathaway19_webber18.xml"
         self.DF = 0.8
         self.alpha = 0.99
         self.greedy = 0.01
@@ -83,17 +84,32 @@ class AIPlayer(Player):
         tinyState.myFood = myFood
 
         # Set my queen and my workers
-        tinyState.myQueen = getAntList(state, tinyState.turn, (QUEEN))
-        tinyState.myWorkers = getAntList(state, tinyState.turn, (WORKER))
+        tinyState.myQueen = getAntList(state, tinyState.turn, (QUEEN,))[0].coords
+        workers = getAntList(state, tinyState.turn, (WORKER,))
+        workerCoords = []
+        for w in workers:
+            workerCoords.append(w.coords)
+        tinyState.myWorkers = workerCoords
 
         # Set my structures
-        tinyState.myStructs = getConstrList(state, tinyState.turn, (ANTHILL, TUNNEL))
+        tinyState.myHill = getConstrList(state, tinyState.turn, (ANTHILL,))[0]
+        tinyState.myTunnel = getConstrList(state, tinyState.turn, (TUNNEL,))[0]
 
         # Set my food score
+        tinyState.myFood = getCurrPlayerInventory(state).foodCount
 
+        # Get the enemy ants
+        enemyID = PLAYER_ONE
+        if tinyState.turn == PLAYER_TWO:
+            enemyID = PLAYER_TWO
 
+        enemyAnts = getAntList(state, enemyID, (WORKER, DRONE, SOLDIER, R_SOLDIER))
+        enemyAntsCoords = []
+        for ea in enemyAnts:
+            enemyAntsCoords.append(ea.coords)
+        tinyState.enemyAnts = enemyAntsCoords
 
-        return 0
+        return tinyState
 
 
     ###
@@ -110,10 +126,61 @@ class AIPlayer(Player):
     #   saveStates
     #
     #   Description:
-    #       saves any states in our memory to our file
+    #       saves any states in our memory to our file in a CSV format
     ###
-    def saveStates(self):
-        return 0
+    def saveStates(self, tinyState):
+
+        tree = None
+        try:
+            tree = ET.parse(self.STATE_FILE)
+        except Exception as e:
+            # Empty file, start a new one
+            root = ET.Element("history")
+            tree = ET.ElementTree(root)
+            tree.write(self.STATE_FILE)
+
+        # Write all of our data to our history
+        root = tree.getroot()
+        state = tree.SubElement(root, "gamestate")
+
+        # Turn
+        eTurn = tree.SubElement(state, "turn")
+        eTurn.text = str(tinyState.turn)
+
+        # Food
+        eFood = tree.SubElement(state, "foodList")
+        for food in tinyState.myFood:
+            foodElement = tree.SubElement(eFood, "food")
+            foodElement.text = str(food)
+
+        # Queen
+        eQueen = tree.SubElement(state, "queen")
+        eQueen.text = str(tinyState.myQueen)
+
+        # Workers
+        eWorkers = tree.SubElement(state, "workers")
+        for w in tinyState.myWorkers:
+            workerEle = tree.SubElement(eWorkers, "worker")
+            workerEle.text = str(w)
+
+        # My Structs
+        eHill = tree.SubElement(state, "hill")
+        eHill.text = str(tinyState.myHill)
+
+        eTunnel = tree.SubElement(state, "tunnel")
+        eTunnel.texst = str(tinyState.myTunnel)
+
+        # my score
+        eScore = tree.SubElement(state, "score")
+        eScore.text = str(tinyState.myFoodScore)
+
+        # enemy ants
+        eEnemyAnts = tree.SubElement(state, "enemyants")
+        for ant in tinyState.enemyAnts:
+            eAnt = tree.SubElement(eEnemyAnts, "ant")
+            eAnt.text = str(ant)
+
+        tree.write(self.STATE_FILE)
 
 
     ###
@@ -126,8 +193,20 @@ class AIPlayer(Player):
     def rewardAgent(self, state):
        return 0
 
+    # Updated upstream
     def TD_0(self, state, alpha, gamma, numOfEpisodes):
         return 0
+
+
+    ###
+    #   adjustUtilities
+    #
+    #   Description:
+    #       Adjusts the previous
+    def adjustUtilities(self):
+        return 0
+
+
     ##
     # getPlacement
     #
@@ -409,8 +488,9 @@ class smallState():
         self.turn = None
         self.myFood = []
         self.myQueen = None
-        self.myWorkers = None
-        self.myStructs = []
+        self.myWorkers = []
+        self.myHill = None
+        self.myTunnel = None
         self.myFoodScore = 0
         self.enemyAnts = []
 
