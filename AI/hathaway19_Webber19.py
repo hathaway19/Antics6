@@ -60,8 +60,39 @@ class AIPlayer(Player):
     #
     #   Description:
     #       Strips a gamestate object of important information and returns a new, consolidated state object
+    #       A consolidated state contains the following items:
+    #           - The current turn
+    #           - The location of my food
+    #           - My queen
+    #           - My workers
+    #           - My structures
+    #           - My food score
+    #           - The enemy ants
     ###
     def consolidateState(self, state):
+
+        tinyState = smallState()
+        tinyState.turn = state.whoseTurn
+
+        # Get the location of each of my foods
+        foods = getConstrList(state, None, (FOOD,))
+        myFood = []
+        for food in foods:
+            if food.coords[1] >= 6:
+                myFood.append(food.coords)
+        tinyState.myFood = myFood
+
+        # Set my queen and my workers
+        tinyState.myQueen = getAntList(state, tinyState.turn, (QUEEN))
+        tinyState.myWorkers = getAntList(state, tinyState.turn, (WORKER))
+
+        # Set my structures
+        tinyState.myStructs = getConstrList(state, tinyState.turn, (ANTHILL, TUNNEL))
+
+        # Set my food score
+
+
+
         return 0
 
 
@@ -374,5 +405,13 @@ def calcAntMove(currentState, antToMove, endDestination, amountOfMovement):
 class smallState():
 
     def __init__(self):
-        return 0
+
+        self.turn = None
+        self.myFood = []
+        self.myQueen = None
+        self.myWorkers = None
+        self.myStructs = []
+        self.myFoodScore = 0
+        self.enemyAnts = []
+
 
