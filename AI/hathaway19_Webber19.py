@@ -199,7 +199,25 @@ class AIPlayer(Player):
     #       +1 for winning | -1 for losing | -0.001 for everything else
     ###
     def rewardAgent(self, state):
-       return 0
+        # The AI's player ID
+        me = state.whoseTurn
+        # The opponent's ID
+        enemy = (state.whoseTurn + 1) % 2
+
+        # Get a reference to the player's inventory
+        my_inv = state.inventories[me]
+        # Get a reference to the enemy player's inventory
+        enemy_inv = state.inventories[enemy]
+
+        # Returns 1.0 if we win
+        if (my_inv.foodCount == 11) or (enemy_queen is None):
+            return 1.0
+        for ant in enemy_inv.ants:
+            if ant.type == QUEEN:
+                if ant.health == 0:
+                    return 1.0
+
+        return 0
 
     # Updated upstream
     def TD_0(self, state, alpha, gamma, numOfEpisodes=1000):
