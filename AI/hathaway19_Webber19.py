@@ -313,7 +313,7 @@ class AIPlayer(Player):
 
         return 0
 
-    def getUtility(self):
+    def getUtility(self, currentState, nextState):
         pass
 
     ##
@@ -341,7 +341,7 @@ class AIPlayer(Player):
         # Go through all the potential moves to find the one with the best utility
         for move in legalMoves:
             nextState = getNextState(currentState, move)
-            utilityOfCurMove = self.getUtility()
+            utilityOfCurMove = self.getUtility(currentState, nextState)
 
             if utilityOfCurMove >= utilityOfBestMove:
                 utilityOfBestMove = utilityOfCurMove
