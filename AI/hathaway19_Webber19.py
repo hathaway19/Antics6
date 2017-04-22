@@ -264,7 +264,6 @@ class AIPlayer(Player):
 
         tree.write(self.STATE_FILE)
 
-
     ###
     #   rewardAgent
     #
@@ -273,11 +272,6 @@ class AIPlayer(Player):
     #       +1 for winning | -1 for losing | -0.001 for everything else
     ###
     def rewardAgent(self, state):
-        # The AI's player ID
-        me = state.whoseTurn
-        # The opponent's ID
-        enemy = (state.whoseTurn + 1) % 2
-
         # Get a reference to the player's inventory
         my_inv = state.inventories[me]
         # Get a reference to the enemy player's inventory
@@ -319,6 +313,43 @@ class AIPlayer(Player):
 
         return 0
 
+    def getUtility(self):
+        pass
+
+    ##
+    # findBestMove
+    #
+    # Description: This method goes through all the potential moves and finds the move that provides
+    # the best utility.
+    #
+    # Parameters:
+    #   currentState - The current state of the game at the time the Game is
+    #       requesting a placement from the player.(GameState)
+    #
+    # Return: the move with the best utility
+    ##
+    def findBestMove(self, currentState):
+        # All legal moves that we can currently take
+        legalMoves = listAllMovementMoves(currentState)
+
+        # The best move to take
+        bestMove = None
+
+        # Utility of the current best move
+        utilityOfBestMove = -9999.0 # arbitrarily small
+
+        # Go through all the potential moves to find the one with the best utility
+        for move in legalMoves:
+            nextState = getNextState(currentState, move)
+            utilityOfCurMove = self.getUtility()
+
+            if utilityOfCurMove >= utilityOfBestMove:
+                utilityOfBestMove = utilityOfCurMove
+                bestMove = move
+
+        #Todo: Maybe add randomness here
+
+        return bestMove
 
     ##
     # getPlacement
@@ -414,7 +445,9 @@ class AIPlayer(Player):
     # Return: Move(moveType [int], coordList [list of 2-tuples of ints], buildType [int]
     ##
     def getMove(self, currentState):
+        # All legal moves that we can currently take
         legalMoves = listAllMovementMoves(currentState)
+
         if len(legalMoves) == 0:
             return Move(END, None, None)
 
