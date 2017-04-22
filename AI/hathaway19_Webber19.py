@@ -286,12 +286,11 @@ class AIPlayer(Player):
         # Returns 1.0 if we win
         if (my_inv.foodCount == 11) or (enemy_inv.getQueen() is None):
             return 1.0
-        for ant in enemy_inv.ants:
-            if ant.type == QUEEN:
-                if ant.health == 0:
-                    return 1.0
+        elif (enemy_inv.foodCount == 11) or (my_inv.getQueen() is None):
+            return -1.0
 
-        return 0
+        # If neither player has won, return -0.001
+        return -0.001
 
     # Updated upstream
     def TD_0(self, state, alpha, gamma, numOfEpisodes=1000):
