@@ -305,7 +305,7 @@ class AIPlayer(Player):
 
             observation = newObservation
             #if done:
-            #    break
+            #p    break
         return 0
 
 
