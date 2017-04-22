@@ -104,7 +104,10 @@ class AIPlayer(Player):
         #if I don't have a worker, give up.  QQ
         numAnts = len(myInv.ants)
         if (numAnts == 1):
-            return Move(END, None, None)
+            if myInv.foodCount >= 2:
+                return Move(BUILD, None, (WORKER,))
+            else:
+                return Move(END, None, None)
 
         #if the worker has already moved, we're done
         myWorker = getAntList(currentState, me, (WORKER,))[0]

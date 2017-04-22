@@ -48,6 +48,15 @@ class AIPlayer(Player):
         self.DF = 0.8
         self.alpha = 0.99
         self.greedy = 0.01
+        self.numGamesPlayed = 0
+        self.numTrace = 5
+
+        # Book keeping for getting the initial state
+        self.initState = True
+
+        # Food gatherer stuff
+        self.myFood = None
+        self.myTunnel = None
 
         # State memory
         self.stateMem = []
@@ -66,6 +75,7 @@ class AIPlayer(Player):
         self.SCORETAG = "s"
         self.EALISTTAG = "ea"
         self.ENEMYANTTAG = "a"
+        self.UTILTAG = "u"
 
         # Load games from our file
         self.loadStates()
@@ -113,8 +123,8 @@ class AIPlayer(Player):
         tinyState.myWorkers = workerCoords
 
         # Set my structures
-        tinyState.myHill = getConstrList(state, tinyState.turn, (ANTHILL,))[0]
-        tinyState.myTunnel = getConstrList(state, tinyState.turn, (TUNNEL,))[0]
+        tinyState.myHill = getConstrList(state, tinyState.turn, (ANTHILL,))[0].coords
+        tinyState.myTunnel = getConstrList(state, tinyState.turn, (TUNNEL,))[0].coords
 
         # Set my food score
         tinyState.myFoodScore = getCurrPlayerInventory(state).foodCount
@@ -129,6 +139,9 @@ class AIPlayer(Player):
         for ea in enemyAnts:
             enemyAntsCoords.append(ea.coords)
         tinyState.enemyAnts = enemyAntsCoords
+
+        # Get the reward for this state
+        tinyState.utility = self.rewardAgent(tinyState)
 
         return tinyState
 
@@ -174,10 +187,12 @@ class AIPlayer(Player):
                     remState.myTunnel = self.textToCoord(attribute.text)
 
                 elif tag == self.SCORETAG:
-                    remState.myFoodScore = self.textToCoord(attribute.text)
+                    remState.myFoodScore = int(attribute.text)
 
                 elif tag == self.ENEMYANTTAG:
-                        remState.enemyAnts.append(self.textToCoord(attribute.text))
+                   remState.enemyAnts.append(self.textToCoord(attribute.text))
+                elif tag == self.UTILTAG:
+                    remState.utility = float(attribute.text)
 
             # We can now save the state in RAM
             self.stateMem.append(remState)
@@ -204,14 +219,31 @@ class AIPlayer(Player):
         else:
             return coords[0]
 
+
     ###
-    #   saveState
+    #   clearMemoryFile
+    #
+    #   Description:
+    #       Erases all of the data in the memory file
+    def clearMemoryFile(self):
+        # Just open the file as write-only and then close it.. overwrites the old file
+        with open(self.STATE_FILE, "w") as mf:
+            mf.close()
+
+
+
+    ###
+    #   saveStates
     #
     #   Description:
     #       saves any states in our memory to our file in a CSV format
     ###
-    def saveState(self, tinyState):
+    def saveStates(self):
 
+        # Wipe our our old memory
+        self.clearMemoryFile()
+
+        # Parse our file
         tree = None
         try:
             tree = ET.parse(self.STATE_FILE)
@@ -223,46 +255,55 @@ class AIPlayer(Player):
 
         # Write all of our data to our history
         root = tree.getroot()
-        state = ET.SubElement(root, self.GAMESTATE)
 
-        # Turn
-        eTurn = ET.SubElement(state, self.TURNTAG)
-        eTurn.text = str(tinyState.turn)
+        for tinyState in self.stateMem:
 
-        # Food
-        eFood = ET.SubElement(state, self.FOODLISTTAG)
-        for food in tinyState.myFood:
-            foodElement = ET.SubElement(eFood, self.FOODTAG)
-            foodElement.text = str(food)
+            state = ET.SubElement(root, self.GAMESTATE)
 
-        # Queen
-        eQueen = ET.SubElement(state, self.QUEENTAG)
-        eQueen.text = str(tinyState.myQueen)
+            # Turn
+            eTurn = ET.SubElement(state, self.TURNTAG)
+            eTurn.text = str(tinyState.turn)
 
-        # Workers
-        eWorkers = ET.SubElement(state, self.WLTAG)
-        for w in tinyState.myWorkers:
-            workerEle = ET.SubElement(eWorkers, self.WTAG)
-            workerEle.text = str(w)
+            # Food
+            eFood = ET.SubElement(state, self.FOODLISTTAG)
+            for food in tinyState.myFood:
+                foodElement = ET.SubElement(eFood, self.FOODTAG)
+                foodElement.text = str(food)
 
-        # My Structs
-        eHill = ET.SubElement(state, self.HILLTAG)
-        eHill.text = str(tinyState.myHill.coords)
+            # Queen
+            eQueen = ET.SubElement(state, self.QUEENTAG)
+            eQueen.text = str(tinyState.myQueen)
 
-        eTunnel = ET.SubElement(state, self.TUNNELTAG)
-        eTunnel.text = str(tinyState.myTunnel.coords)
+            # Workers
+            eWorkers = ET.SubElement(state, self.WLTAG)
+            for w in tinyState.myWorkers:
+                workerEle = ET.SubElement(eWorkers, self.WTAG)
+                workerEle.text = str(w)
 
-        # my score
-        eScore = ET.SubElement(state, self.SCORETAG)
-        eScore.text = str(tinyState.myFoodScore)
+            # My Structs
+            eHill = ET.SubElement(state, self.HILLTAG)
+            eHill.text = str(tinyState.myHill)
 
-        # enemy ants
-        eEnemyAnts = ET.SubElement(state, self.EALISTTAG)
-        for ant in tinyState.enemyAnts:
-            eAnt = ET.SubElement(eEnemyAnts, self.ENEMYANTTAG)
-            eAnt.text = str(ant)
+
+            eTunnel = ET.SubElement(state, self.TUNNELTAG)
+            eTunnel.text = str(tinyState.myTunnel)
+
+            # my score
+            eScore = ET.SubElement(state, self.SCORETAG)
+            eScore.text = str(tinyState.myFoodScore)
+
+            # enemy ants
+            eEnemyAnts = ET.SubElement(state, self.EALISTTAG)
+            for ant in tinyState.enemyAnts:
+                eAnt = ET.SubElement(eEnemyAnts, self.ENEMYANTTAG)
+                eAnt.text = str(ant)
+
+            # Save the utility of the state
+            eUtil = ET.SubElement(state, self.UTILTAG)
+            eUtil.text = str(tinyState.utility)
 
         tree.write(self.STATE_FILE)
+
 
     ###
     #   rewardAgent
@@ -272,19 +313,22 @@ class AIPlayer(Player):
     #       +1 for winning | -1 for losing | -0.001 for everything else
     ###
     def rewardAgent(self, state):
-        # Get a reference to the player's inventory
-        my_inv = state.inventories[me]
-        # Get a reference to the enemy player's inventory
-        enemy_inv = state.inventories[enemy]
 
-        # Returns 1.0 if we win
-        if (my_inv.foodCount == 11) or (enemy_inv.getQueen() is None):
+        # If we have won, reward +1
+        if state.myFoodScore == 11:
             return 1.0
-        elif (enemy_inv.foodCount == 11) or (my_inv.getQueen() is None):
+
+        # If we have lost, reward -1
+        if len(state.myWorkers) == 0 and state.myFoodScore < 2:
+            return -1.0
+        if len(state.myQueen) == 0:
             return -1.0
 
-        # If neither player has won, return -0.001
-        return -0.001
+        # Otherwise, just slightly punish the agent
+        return -.01
+
+
+
 
     # Updated upstream
     def TD_0(self, state, alpha, gamma, numOfEpisodes=1000):
@@ -300,7 +344,6 @@ class AIPlayer(Player):
             #if done:
             #p    break
         return 0
-
 
     ###
     #   adjustUtilities
@@ -445,21 +488,82 @@ class AIPlayer(Player):
     # Return: Move(moveType [int], coordList [list of 2-tuples of ints], buildType [int]
     ##
     def getMove(self, currentState):
-        # All legal moves that we can currently take
-        legalMoves = listAllMovementMoves(currentState)
 
-        if len(legalMoves) == 0:
-            return Move(END, None, None)
+        move = self.gatherFood(currentState)
 
-        randInt = random.randint(0, len(legalMoves) - 1)
-        move = legalMoves[randInt]
+        # Save our state in our memory
+        if self.initState:
+            tinyState = self.consolidateState(currentState)
+            self.stateMem.append(tinyState)
+            self.initState = False
 
-        # Get our consolidated state after the move
-        nextState = self.consolidateState(currentState)
-        self.stateMem.append(nextState)
-        self.saveState(nextState)
+        if not self.initState:
+            if self.rewardAgent(self.consolidateState(currentState)) == 1 or \
+                self.rewardAgent(self.consolidateState(currentState)) == -1:
+                return move
+                # Make sure we don't add a state after we win or lose
+            else:
+                tinyState = self.consolidateState(getNextState(currentState, move))
+                self.stateMem.append(tinyState)
+
+        # Update the previous state's utilities
+        currIdx = len(self.stateMem) - 1
+        if (currIdx > 0):
+            for idx in range(currIdx-1, max(-1, (len(self.stateMem) - 1 - self.numTrace) - 1), -1):
+                currUtil = self.stateMem[idx].utility
+                rewardAtState = self.rewardAgent(self.stateMem[idx])
+                self.stateMem[idx].utility = rewardAtState + self.alpha * \
+                    (rewardAtState + self.DF*self.stateMem[idx + 1].utility - currUtil)
 
         return move
+
+
+    def gatherFood(self, currentState):
+        # Useful pointers
+        myInv = getCurrPlayerInventory(currentState)
+        me = currentState.whoseTurn
+
+        # the first time this method is called, the food and tunnel locations
+        # need to be recorded in their respective instance variables
+        if (self.myTunnel == None):
+            self.myTunnel = getConstrList(currentState, me, (TUNNEL,))[0]
+        if (self.myFood == None):
+            foods = getConstrList(currentState, None, (FOOD,))
+            self.myFood = foods[0]
+            # find the food closest to the tunnel
+            bestDistSoFar = 1000  # i.e., infinity
+            for food in foods:
+                dist = stepsToReach(currentState, self.myTunnel.coords, food.coords)
+                if (dist < bestDistSoFar):
+                    self.myFood = food
+                    bestDistSoFar = dist
+
+        # if the hasn't moved, have her move in place so she will attack
+        myQueen = myInv.getQueen()
+        if (not myQueen.hasMoved):
+            return Move(MOVE_ANT, [myQueen.coords], None)
+
+        # if I don't have a worker, give up.  QQ
+        numAnts = len(myInv.ants)
+        if (numAnts == 1):
+            return Move(END, None, None)
+
+        # if the worker has already moved, we're done
+        myWorker = getAntList(currentState, me, (WORKER,))[0]
+        if (myWorker.hasMoved):
+            return Move(END, None, None)
+
+        # if the worker has food, move toward tunnel
+        if (myWorker.carrying):
+            path = createPathToward(currentState, myWorker.coords,
+                                    self.myTunnel.coords, UNIT_STATS[WORKER][MOVEMENT])
+            return Move(MOVE_ANT, path, None)
+
+        # if the worker has no food, move toward food
+        else:
+            path = createPathToward(currentState, myWorker.coords,
+                                    self.myFood.coords, UNIT_STATS[WORKER][MOVEMENT])
+            return Move(MOVE_ANT, path, None)
 
     ##
     # getAttack
@@ -493,9 +597,12 @@ class AIPlayer(Player):
     #   hasWon - True if the player has won the game, False if the player lost. (Boolean)
     ##
     def registerWin(self, hasWon):
-        # method template, not implemented
-        pass
+        # At the end of each game, save our memory into a the xml file
+        self.saveStates()
 
+        # Increment our games played and alpha value
+        self.numGamesPlayed += 1
+        self.alpha = 1.0 / (1.0 + (self.numGamesPlayed / 100.0) * (self.numGamesPlayed / 100.0))
 
 ##
 # calcAntMove
@@ -558,5 +665,7 @@ class smallState():
         self.myTunnel = None
         self.myFoodScore = 0
         self.enemyAnts = []
+        self.utility = 0
+        self.prevMove = None
 
 
