@@ -40,7 +40,7 @@ class AIPlayer(Player):
     #   inputPlayerId - The id to give the new player (int)
     ##
     def __init__(self, inputPlayerId):
-        super(AIPlayer, self).__init__(inputPlayerId, "HW6")
+        super(AIPlayer, self).__init__(inputPlayerId, "HW6_hathaway_webber")
         # Variables to store our tunnel and anthill
         self.myTunnel = None
         self.myAnthill = None
@@ -51,6 +51,21 @@ class AIPlayer(Player):
 
         # State memory
         self.stateMem = []
+
+        # Tag IDs for XML document
+        self.HISTORY = "history"
+        self.GAMESTATE = "gs"
+        self.TURNTAG = "tn"
+        self.FOODLISTTAG = "fl"
+        self.FOODTAG = "f"
+        self.QUEENTAG = "q"
+        self.WLTAG = "wl"
+        self.WTAG = "w"
+        self.HILLTAG = "h"
+        self.TUNNELTAG = "t"
+        self.SCORETAG = "s"
+        self.EALISTTAG = "ea"
+        self.ENEMYANTTAG = "a"
 
         # Load games from our file
         self.loadStates()
@@ -85,7 +100,7 @@ class AIPlayer(Player):
         foods = getConstrList(state, None, (FOOD,))
         myFood = []
         for food in foods:
-            if food.coords[1] >= 6:
+            if food.coords[1] <= 4:
                 myFood.append(food.coords)
         tinyState.myFood = myFood
 
@@ -102,11 +117,11 @@ class AIPlayer(Player):
         tinyState.myTunnel = getConstrList(state, tinyState.turn, (TUNNEL,))[0]
 
         # Set my food score
-        tinyState.myFood = getCurrPlayerInventory(state).foodCount
+        tinyState.myFoodScore = getCurrPlayerInventory(state).foodCount
 
         # Get the enemy ants
         enemyID = PLAYER_ONE
-        if tinyState.turn == PLAYER_TWO:
+        if tinyState.turn == PLAYER_ONE:
             enemyID = PLAYER_TWO
 
         enemyAnts = getAntList(state, enemyID, (WORKER, DRONE, SOLDIER, R_SOLDIER))
@@ -125,67 +140,126 @@ class AIPlayer(Player):
     #       loads any existing states into our memory
     ###
     def loadStates(self):
-        return 0
-        # with open(self.STATE_FILE, 'rb') as file:
-        #     print "dfdf"
+        # Try to load the memory. If we fail, then we have no memory.
+        try:
+            tree = ET.parse("../" + self.STATE_FILE)
+        except Exception as e:
+            # Empty file, so do nothing
+            return
 
+        # At this point, begin adding in children of root
+        root = tree.getroot()
+
+        for state in root.iter(self.GAMESTATE):
+            remState = smallState()
+
+            for attribute in state.iter():
+                tag = attribute.tag
+
+                if tag == self.TURNTAG:
+                    remState.turn = attribute.text
+                elif tag == self.FOODTAG:
+                    remState.myFood.append(self.textToCoord(attribute.text))
+
+                elif tag == self.QUEENTAG:
+                    remState.myQueen = self.textToCoord(attribute.text)
+
+                elif tag == self.WTAG:
+                    remState.myWorkers.append(self.textToCoord(attribute.text))
+
+                elif tag == self.HILLTAG:
+                    remState.myHill = self.textToCoord(attribute.text)
+
+                elif tag == self.TUNNELTAG:
+                    remState.myTunnel = self.textToCoord(attribute.text)
+
+                elif tag == self.SCORETAG:
+                    remState.myFoodScore = self.textToCoord(attribute.text)
+
+                elif tag == self.ENEMYANTTAG:
+                        remState.enemyAnts.append(self.textToCoord(attribute.text))
+
+            # We can now save the state in RAM
+            self.stateMem.append(remState)
+
+    def textToCoord(self, text):
+        text = str(text)
+
+        # Remove unwanted characters
+        text = text.replace("(", "")
+        text = text.replace(" ", "")
+        text = text.replace(")", "")
+
+        # Split into array
+        text = text.split(",")
+
+        # Turn str to int
+        coords = []
+        for c in text:
+            coords.append(ord(c) - 48)
+
+        if len(coords) > 1:
+            list = (coords[0], coords[1])  #return list to stay consistent
+            return list
+        else:
+            return coords[0]
 
     ###
-    #   saveStates
+    #   saveState
     #
     #   Description:
     #       saves any states in our memory to our file in a CSV format
     ###
-    def saveStates(self, tinyState):
+    def saveState(self, tinyState):
 
         tree = None
         try:
             tree = ET.parse(self.STATE_FILE)
         except Exception as e:
             # Empty file, start a new one
-            root = ET.Element("history")
+            root = ET.Element(self.HISTORY)
             tree = ET.ElementTree(root)
             tree.write(self.STATE_FILE)
 
         # Write all of our data to our history
         root = tree.getroot()
-        state = tree.SubElement(root, "gamestate")
+        state = ET.SubElement(root, self.GAMESTATE)
 
         # Turn
-        eTurn = tree.SubElement(state, "turn")
+        eTurn = ET.SubElement(state, self.TURNTAG)
         eTurn.text = str(tinyState.turn)
 
         # Food
-        eFood = tree.SubElement(state, "foodList")
+        eFood = ET.SubElement(state, self.FOODLISTTAG)
         for food in tinyState.myFood:
-            foodElement = tree.SubElement(eFood, "food")
+            foodElement = ET.SubElement(eFood, self.FOODTAG)
             foodElement.text = str(food)
 
         # Queen
-        eQueen = tree.SubElement(state, "queen")
+        eQueen = ET.SubElement(state, self.QUEENTAG)
         eQueen.text = str(tinyState.myQueen)
 
         # Workers
-        eWorkers = tree.SubElement(state, "workers")
+        eWorkers = ET.SubElement(state, self.WLTAG)
         for w in tinyState.myWorkers:
-            workerEle = tree.SubElement(eWorkers, "worker")
+            workerEle = ET.SubElement(eWorkers, self.WTAG)
             workerEle.text = str(w)
 
         # My Structs
-        eHill = tree.SubElement(state, "hill")
-        eHill.text = str(tinyState.myHill)
+        eHill = ET.SubElement(state, self.HILLTAG)
+        eHill.text = str(tinyState.myHill.coords)
 
-        eTunnel = tree.SubElement(state, "tunnel")
-        eTunnel.texst = str(tinyState.myTunnel)
+        eTunnel = ET.SubElement(state, self.TUNNELTAG)
+        eTunnel.text = str(tinyState.myTunnel.coords)
 
         # my score
-        eScore = tree.SubElement(state, "score")
+        eScore = ET.SubElement(state, self.SCORETAG)
         eScore.text = str(tinyState.myFoodScore)
 
         # enemy ants
-        eEnemyAnts = tree.SubElement(state, "enemyants")
+        eEnemyAnts = ET.SubElement(state, self.EALISTTAG)
         for ant in tinyState.enemyAnts:
-            eAnt = tree.SubElement(eEnemyAnts, "ant")
+            eAnt = ET.SubElement(eEnemyAnts, self.ENEMYANTTAG)
             eAnt.text = str(ant)
 
         tree.write(self.STATE_FILE)
@@ -210,7 +284,7 @@ class AIPlayer(Player):
         enemy_inv = state.inventories[enemy]
 
         # Returns 1.0 if we win
-        if (my_inv.foodCount == 11) or (enemy_queen is None):
+        if (my_inv.foodCount == 11) or (enemy_inv.getQueen() is None):
             return 1.0
         for ant in enemy_inv.ants:
             if ant.type == QUEEN:
@@ -230,8 +304,8 @@ class AIPlayer(Player):
             #Todo: call method to update utility
 
             observation = newObservation
-            if done:
-                break
+            #if done:
+            #    break
         return 0
 
 
@@ -341,100 +415,19 @@ class AIPlayer(Player):
     # Return: Move(moveType [int], coordList [list of 2-tuples of ints], buildType [int]
     ##
     def getMove(self, currentState):
-        # Variables to hold our inventory, our player ID, and the opponent's player ID
-        myInv = getCurrPlayerInventory(currentState)
-        me = currentState.whoseTurn
-        enemy = (currentState.whoseTurn + 1) % 2
-        # Variable to hold total number of ally worker ants
-        numOfWorkerAnts = len(getAntList(currentState, me, (WORKER,)))
-        # List of all ally worker ants
-        myWorkers = getAntList(currentState, me, (WORKER,))
-        # Variables to hold list of ally drones
-        myDrones = getAntList(currentState, me, (DRONE,))
-        # Variables to hold coordinates of enemy queen and anthill coordinates
-        enemyQueenCoords = getAntList(currentState, enemy, (QUEEN,))[0].coords
-        enemyAnthillCoords = getConstrList(currentState, enemy, (ANTHILL,))[0].coords
-        # Variable to hold food
-        foods = getConstrList(currentState, None, (FOOD,))
-
-        # the first time this method is called, the food and tunnel locations
-        # need to be recorded in their respective instance variables
-        if self.myTunnel == None:
-            self.myTunnel = getConstrList(currentState, me, (TUNNEL,))[0]
-        if self.myAnthill == None:
-            self.myAnthill = getConstrList(currentState, me, (ANTHILL,))[0]
-
-        # If all the workers have moved, we're done (checks to see if last worker has moved)
-        lastWorker = getAntList(currentState, me, (WORKER,))[numOfWorkerAnts - 1]
-        if lastWorker.hasMoved:
+        legalMoves = listAllMovementMoves(currentState)
+        if len(legalMoves) == 0:
             return Move(END, None, None)
 
-        # Generates a random number between 0 and 1 to move Queen back and forth
-        # Helps insure that other ants don't collide as often
-        rndNum = random.randint(0, 1)
-        if rndNum == 0:
-            queenPath = createPathToward(currentState, myInv.getQueen().coords,
-                                         (0, 1), UNIT_STATS[QUEEN][MOVEMENT])
-        else:
-            queenPath = createPathToward(currentState, myInv.getQueen().coords,
-                                         (1, 1), UNIT_STATS[QUEEN][MOVEMENT])
-        if not myInv.getQueen().hasMoved:
-            return Move(MOVE_ANT, queenPath, None)
+        randInt = random.randint(0, len(legalMoves) - 1)
+        move = legalMoves[randInt]
 
-        # Creates enough workers to have 2 on the board (if we have food and anthill empty)
-        if myInv.foodCount > 0 and numOfWorkerAnts < 2:
-            if getAntAt(currentState, myInv.getAnthill().coords) is None:
-                return Move(BUILD, [myInv.getAnthill().coords], WORKER)
-        # Creates drones if we already have enough workers
-        elif myInv.foodCount >= 2:
-            if getAntAt(currentState, myInv.getAnthill().coords) is None:
-                return Move(BUILD, [myInv.getAnthill().coords], DRONE)
-        # Commands all drones to move to enemy queen coordinates
-        for drone in myDrones:
-            # Only moves the selected drone if it hasn't moved or if it's not on the enemy hill
-            if drone.coords != enemyAnthillCoords:
-                if not drone.hasMoved:
-                    # Sends drone to opponent's anthill or queen, depending on which is closer
-                    distToEnemyAnthill = stepsToReach(currentState, drone.coords, enemyAnthillCoords)
-                    distToEnemyQueen = stepsToReach(currentState, drone.coords, enemyQueenCoords)
-                    if distToEnemyAnthill < distToEnemyQueen:
-                        dronePath = createPathToward(currentState, drone.coords,
-                                                     enemyAnthillCoords, UNIT_STATS[DRONE][MOVEMENT])
-                    else:
-                        dronePath = createPathToward(currentState, drone.coords,
-                                                     enemyQueenCoords, UNIT_STATS[DRONE][MOVEMENT])
-                    return Move(MOVE_ANT, dronePath, None)
-        # Moves all worker ants
-        for worker in myWorkers:
-            if not worker.hasMoved:
-                # Move to anthill or tunnel if worker is carrying food
-                if worker.carrying:
-                    if (stepsToReach(currentState, worker.coords, self.myAnthill.coords)
-                            < (stepsToReach(currentState, worker.coords, self.myTunnel.coords))):
-                        # Checks the path to make sure there aren't any collisions
-                        path = calcAntMove(currentState, worker, self.myAnthill.coords,
-                                           UNIT_STATS[WORKER][MOVEMENT])
-                    else:
-                        # Checks the path to make sure there aren't any collisions
-                        path = calcAntMove(currentState, worker, self.myTunnel.coords,
-                                           UNIT_STATS[WORKER][MOVEMENT])
-                    return Move(MOVE_ANT, path, None)
-                # Move to closest food if worker isn't carrying food
-                else:
-                    closestFood = getConstrList(currentState, None, (FOOD,))[0]
-                    for food in foods:
-                        distToClosestFood = stepsToReach(currentState, worker.coords,
-                                                         closestFood.coords)
-                        distToCurrentFood = stepsToReach(currentState, worker.coords,
-                                                         food.coords)
+        # Get our consolidated state after the move
+        nextState = self.consolidateState(currentState)
+        self.stateMem.append(nextState)
+        self.saveState(nextState)
 
-                        if distToCurrentFood < distToClosestFood:
-                            closestFood = food
-
-                    # Checks the path to make sure there aren't any collisions
-                    path = calcAntMove(currentState, worker, closestFood.coords,
-                                       UNIT_STATS[WORKER][MOVEMENT])
-                    return Move(MOVE_ANT, path, None)
+        return move
 
     ##
     # getAttack
