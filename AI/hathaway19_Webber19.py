@@ -317,6 +317,22 @@ class AIPlayer(Player):
         # Otherwise, just slightly punish the agent
         return -.01
 
+    def rewardAgent2(self, state):
+        me = state.whoseTurn
+        my_inv = state.inventories[me]
+        my_queen = getAntList(state, me, (QUEEN,))
+        my_workers = getAntList(state, me, (WORKER,))
+
+        if my_inv.foodCount == 11:
+            return 1.0
+
+        if my_queen is None:
+            return -1.0
+        if len(my_workers) == 0 and my_inv.foodCount < 2:
+            return -1.0
+
+        return -0.01
+
     ##
     # getPlacement
     #
@@ -447,9 +463,10 @@ class AIPlayer(Player):
     ##
     def getMove(self, currentState):
 
+        # Default move to take is to gather food
         move = self.gatherFood(currentState)
 
-        # Save our state in our memory
+        # Save our state in our memory (if first time visiting state)
         if self.initState:
             tinyState = self.consolidateState(currentState)
             self.stateMem.append(tinyState)
@@ -473,9 +490,28 @@ class AIPlayer(Player):
                 self.stateMem[idx].utility = rewardAtState + self.alpha * \
                     (rewardAtState + self.DF*self.stateMem[idx + 1].utility - currUtil)
 
+        # allMoves = listAllLegalMoves(currentState)
+        # bestUtil = -9999.0
+        # bestMoveIdx = 0
+        # for idx in range(len(self.stateMem) - self.numTrace):
+        #     currUtil = self.stateMem[idx].utility
+        #     if currUtil >= bestUtil:
+        #         bestUtil = currUtil
+        #         bestMoveIdx = idx
+        #
+        # moveIdx = 0
+        # bestMove = None
+        # for move in allMoves:
+        #     moveIdx += 1
+        #     print "move idx: ", moveIdx
+        #     print "best move idx", bestMoveIdx
+        #     if moveIdx == bestMoveIdx:
+        #         print "found best move"
+        #         bestMove = move
+        # for i in range(len(allMoves)):
+        #     bestMove =
+
         return move
-        # moveToTake = self.findBestMove(currentState)
-        # return moveToTake
 
 
     def gatherFood(self, currentState):
