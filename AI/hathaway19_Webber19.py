@@ -80,13 +80,6 @@ class AIPlayer(Player):
         # Load games from our file
         self.loadStates()
 
-        self.utilityArray = []
-
-        # Load are existing states if the file exists
-        # if filePath.isfile(self.STATE_FILE):
-        #     self.loadStates()
-
-
     ###
     #   consolidateState
     #
@@ -230,8 +223,6 @@ class AIPlayer(Player):
         with open(self.STATE_FILE, "w") as mf:
             mf.close()
 
-
-
     ###
     #   saveStates
     #
@@ -303,7 +294,6 @@ class AIPlayer(Player):
             eUtil.text = str(tinyState.utility)
 
         tree.write(self.STATE_FILE)
-
 
     ###
     #   rewardAgent
