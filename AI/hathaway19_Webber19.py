@@ -20,7 +20,7 @@ from AIPlayerUtils import *
 #
 # Due Date: April 24th, 2017
 #
-# Description:
+# Description: This AI uses active learning to decide which moves to take.
 ##
 
 ##
@@ -327,73 +327,6 @@ class AIPlayer(Player):
         # Otherwise, just slightly punish the agent
         return -.01
 
-
-
-
-    # Updated upstream
-    def TD_0(self, state, alpha, gamma, numOfEpisodes=1000):
-        observation = "stuff"
-        for episode in range(numOfEpisodes):
-            actionTaken = "stuff"
-            newObservation = "stuff"
-            reward = "blah"
-
-            #Todo: call method to update utility
-
-            observation = newObservation
-            #if done:
-            #p    break
-        return 0
-
-    ###
-    #   adjustUtilities
-    #
-    #   Description:
-    #       Adjusts the previous
-    def adjustUtilities(self, observation, newObservation, reward, alpha, gamma):
-        oldUtility = "stuff"
-        newUtility = "stuff"
-
-        return 0
-
-    def getUtility(self, currentState, nextState):
-        pass
-
-    ##
-    # findBestMove
-    #
-    # Description: This method goes through all the potential moves and finds the move that provides
-    # the best utility.
-    #
-    # Parameters:
-    #   currentState - The current state of the game at the time the Game is
-    #       requesting a placement from the player.(GameState)
-    #
-    # Return: the move with the best utility
-    ##
-    def findBestMove(self, currentState):
-        # All legal moves that we can currently take
-        legalMoves = listAllMovementMoves(currentState)
-
-        # The best move to take
-        bestMove = None
-
-        # Utility of the current best move
-        utilityOfBestMove = -9999.0 # arbitrarily small
-
-        # Go through all the potential moves to find the one with the best utility
-        for move in legalMoves:
-            nextState = getNextState(currentState, move)
-            utilityOfCurMove = self.getUtility(currentState, nextState)
-
-            if utilityOfCurMove >= utilityOfBestMove:
-                utilityOfBestMove = utilityOfCurMove
-                bestMove = move
-
-        #Todo: Maybe add randomness here
-
-        return bestMove
-
     ##
     # getPlacement
     #
@@ -468,6 +401,41 @@ class AIPlayer(Player):
             return None
 
     ##
+    # findBestMove
+    #
+    # Description: This method goes through all the potential moves and finds the move that provides
+    # the best utility.
+    #
+    # Parameters:
+    #   currentState - The current state of the game at the time the Game is
+    #       requesting a placement from the player.(GameState)
+    #
+    # Return: the move with the best utility
+    ##
+    def findBestMove(self, currentState):
+        # All legal moves that we can currently take
+        legalMoves = listAllMovementMoves(currentState)
+
+        # The best move to take
+        bestMove = None
+
+        # Utility of the current best move
+        utilityOfBestMove = -9999.0  # arbitrarily small
+
+        # Go through all the potential moves to find the one with the best utility
+        for move in legalMoves:
+            nextState = getNextState(currentState, move)
+            utilityOfCurMove = self.stateMem[idx].utility
+
+            if utilityOfCurMove >= utilityOfBestMove:
+                utilityOfBestMove = utilityOfCurMove
+                bestMove = move
+
+        # Todo: Maybe add randomness here
+
+        return bestMove
+
+    ##
     # getMove
     # Description: The getMove method corresponds to the play phase of the game
     # and requests from the player a Move object. All types are symbolic
@@ -516,6 +484,8 @@ class AIPlayer(Player):
                     (rewardAtState + self.DF*self.stateMem[idx + 1].utility - currUtil)
 
         return move
+        # moveToTake = self.findBestMove(currentState)
+        # return moveToTake
 
 
     def gatherFood(self, currentState):
