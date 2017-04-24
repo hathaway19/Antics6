@@ -80,6 +80,8 @@ class AIPlayer(Player):
         # Load games from our file
         self.loadStates()
 
+        self.numOfTurns = 0
+
     ###
     #   consolidateState
     #
@@ -227,7 +229,7 @@ class AIPlayer(Player):
     #   saveStates
     #
     #   Description:
-    #       saves any states in our memory to our file in a CSV format
+    #       saves any states in our memory to our file in a XML format
     ###
     def saveStates(self):
 
@@ -490,7 +492,11 @@ class AIPlayer(Player):
                 self.stateMem[idx].utility = rewardAtState + self.alpha * \
                     (rewardAtState + self.DF*self.stateMem[idx + 1].utility - currUtil)
 
-        # allMoves = listAllLegalMoves(currentState)
+        allMoves = listAllLegalMoves(currentState)
+
+        print "stateMem: ", len(self.stateMem)
+        print "all moves: ", len(allMoves)
+        print "stateMem: ", len(self.stateMem)
         # bestUtil = -9999.0
         # bestMoveIdx = 0
         # for idx in range(len(self.stateMem) - self.numTrace):
@@ -510,6 +516,10 @@ class AIPlayer(Player):
         #         bestMove = move
         # for i in range(len(allMoves)):
         #     bestMove =
+
+        # Small chance of choosing a random move
+        if random.random() < 0.1:
+            return allMoves[random.randint(0, len(allMoves) - 1)]
 
         return move
 
@@ -596,6 +606,7 @@ class AIPlayer(Player):
         # At the end of each game, save our memory into a the xml file
         self.saveStates()
 
+        self.numOfTurns = 0
         # Increment our games played and alpha value
         self.numGamesPlayed += 1
         self.alpha = 1.0 / (1.0 + (self.numGamesPlayed / 100.0) * (self.numGamesPlayed / 100.0))
