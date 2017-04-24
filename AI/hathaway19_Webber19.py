@@ -47,7 +47,7 @@ class AIPlayer(Player):
         self.STATE_FILE = "states_hathaway19_webber18.xml"
         self.DF = 0.8
         self.alpha = 0.99
-        self.greedy = 0.01
+        self.greedy = 0.10
         self.numGamesPlayed = 0
         self.numTrace = 5
 
@@ -492,11 +492,35 @@ class AIPlayer(Player):
                 self.stateMem[idx].utility = rewardAtState + self.alpha * \
                     (rewardAtState + self.DF*self.stateMem[idx + 1].utility - currUtil)
 
+        # All possible moves that we can take
         allMoves = listAllLegalMoves(currentState)
 
-        print "stateMem: ", len(self.stateMem)
-        print "all moves: ", len(allMoves)
-        print "stateMem: ", len(self.stateMem)
+        # print "stateMem: ", len(self.stateMem)
+        # print "all moves: ", len(allMoves)
+        #
+        # bestUtil = -9999.0 #really small
+        # bestMove = None
+        # curStateIdx = len(self.stateMem) - len(allMoves)
+        #
+        # if curStateIdx < 0:
+        #     curStateIdx = 0
+        #
+        # print curStateIdx
+        # for curMove in allMoves:
+        #     curUtility = self.stateMem[curStateIdx].utility
+        #     if curUtility >= bestUtil:
+        #         bestUtil = curUtility
+        #         move = curMove
+        #     print curStateIdx
+
+        # Small chance of choosing a random move to potentially learn better moves
+        if random.random() < self.greedy:
+            rndMoveIdx = random.randint(0, len(allMoves) - 1)
+            return allMoves[rndMoveIdx]
+
+        # If a random move is not taken, take the best move
+        return move
+
         # bestUtil = -9999.0
         # bestMoveIdx = 0
         # for idx in range(len(self.stateMem) - self.numTrace):
@@ -515,13 +539,6 @@ class AIPlayer(Player):
         #         print "found best move"
         #         bestMove = move
         # for i in range(len(allMoves)):
-        #     bestMove =
-
-        # Small chance of choosing a random move
-        if random.random() < 0.1:
-            return allMoves[random.randint(0, len(allMoves) - 1)]
-
-        return move
 
 
     def gatherFood(self, currentState):
