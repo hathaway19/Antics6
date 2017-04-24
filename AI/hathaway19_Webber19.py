@@ -492,51 +492,49 @@ class AIPlayer(Player):
 
         # All possible moves that we can take
         allMoves = listAllLegalMoves(currentState)
+        allMovementMoves = listAllMovementMoves(currentState)
 
-        # print "stateMem: ", len(self.stateMem)
-        # print "all moves: ", len(allMoves)
-        #
-        bestUtil = -9999.0 #really small
+        match = False
 
-        # curStateIdx = len(self.stateMem) - len(allMoves)
-        #
-        # if curStateIdx < 0:
-        #     curStateIdx = 0
-        #
-        # print curStateIdx
-        # for curMove in allMoves:
-        #     curUtility = self.stateMem[curStateIdx].utility
-        #     if curUtility >= bestUtil:
-        #         bestUtil = curUtility
-        #         move = curMove
-        #     print curStateIdx
+        bestUtil = -9999.0  # really small
+
+        # Compare the state of the move and the states in the stateMem to see if there's a match
+        for curMove in allMovementMoves:
+            # The next state if we use the move
+            nextState = getNextState(currentState, curMove)
+
+            # See if the state matches in terms of ant coords and food amounts
+            for state in self.stateMem:
+                match = self.compareStates(nextState, state)
+                # If there is a match, look at utility
+                if match:
+                    print "a match is found!"
+                    if state.utility >= bestUtil:
+                        print "changing move"
+                        bestUtil = state.utility
+                        move = curMove
 
         # Small chance of choosing a random move to potentially learn better moves
-        if random.random() < self.greedy:
-            rndMoveIdx = random.randint(0, len(allMoves) - 1)
-            return allMoves[rndMoveIdx]
+        # if random.random() < self.greedy:
+        #     rndMoveIdx = random.randint(0, len(allMoves) - 1)
+        #     return allMoves[rndMoveIdx]
 
         # If a random move is not taken, take the best move
         return move
 
-        # bestUtil = -9999.0
-        # bestMoveIdx = 0
-        # for idx in range(len(self.stateMem) - self.numTrace):
-        #     currUtil = self.stateMem[idx].utility
-        #     if currUtil >= bestUtil:
-        #         bestUtil = currUtil
-        #         bestMoveIdx = idx
-        #
-        # moveIdx = 0
-        # bestMove = None
-        # for move in allMoves:
-        #     moveIdx += 1
-        #     print "move idx: ", moveIdx
-        #     print "best move idx", bestMoveIdx
-        #     if moveIdx == bestMoveIdx:
-        #         print "found best move"
-        #         bestMove = move
-        # for i in range(len(allMoves)):
+    def compareStates(self, stateFromMove, stateFromStateMem):
+        me = stateFromMove.whoseTurn
+        my_inv = stateFromMove.inventories[me]
+        my_workers = getAntList(stateFromMove, me, (WORKER,))
+
+        if my_inv.foodCount != stateFromStateMem.myFoodScore:
+            return False
+
+        for worker in my_workers:
+            for memWorkerCoords in stateFromStateMem.myWorkers:
+                if worker.coords != memWorkerCoords:
+                    return False
+        return True
 
 
     def gatherFood(self, currentState):
@@ -626,6 +624,10 @@ class AIPlayer(Player):
 
         # Amount of random moves goes down over time
         self.greedy -= self.numGamesPlayed * 0.001
+
+        if self.greedy < 0:
+            self.greedy = 0
+
         self.alpha = 1.0 / (1.0 + (self.numGamesPlayed / 100.0) * (self.numGamesPlayed / 100.0))
 
 ##
