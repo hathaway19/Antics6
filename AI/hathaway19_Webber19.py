@@ -117,7 +117,11 @@ class AIPlayer(Player):
 
         # Set my structures
         tinyState.myHill = getConstrList(state, tinyState.turn, (ANTHILL,))[0].coords
-        tinyState.myTunnel = getConstrList(state, tinyState.turn, (TUNNEL,))[0].coords
+        try:
+            tinyState.myTunnel = getConstrList(state, tinyState.turn, (TUNNEL,))[0].coords
+        except Exception as e:
+            tinyState.myTunnel = (0,0)
+
 
         # Set my food score
         tinyState.myFoodScore = getCurrPlayerInventory(state).foodCount
@@ -317,22 +321,6 @@ class AIPlayer(Player):
         # Otherwise, just slightly punish the agent
         return -.01
 
-    def rewardAgent2(self, state):
-        me = state.whoseTurn
-        my_inv = state.inventories[me]
-        my_queen = getAntList(state, me, (QUEEN,))
-        my_workers = getAntList(state, me, (WORKER,))
-
-        if my_inv.foodCount == 11:
-            return 1.0
-
-        if my_queen is None:
-            return -1.0
-        if len(my_workers) == 0 and my_inv.foodCount < 2:
-            return -1.0
-
-        return -0.01
-
     ##
     # getPlacement
     #
@@ -463,8 +451,19 @@ class AIPlayer(Player):
     ##
     def getMove(self, currentState):
 
+        # All possible moves that we can take
+        allMoves = listAllLegalMoves(currentState)
+        allMovementMoves = listAllMovementMoves(currentState)
+
+        # Small chance of choosing a random move to potentially learn better moves
+        if random.random() < self.greedy:
+            rndMoveIdx = random.randint(0, len(allMoves) - 1)
+            return allMoves[rndMoveIdx]
+
         # Default move to take is to gather food
         move = self.gatherFood(currentState)
+        # rndMoveIdx = random.randint(0, len(allMoves) - 1)
+        # move = allMoves[rndMoveIdx]
 
         # Save our state in our memory (if first time visiting state)
         if self.initState:
@@ -490,10 +489,6 @@ class AIPlayer(Player):
                 self.stateMem[idx].utility = rewardAtState + self.alpha * \
                     (rewardAtState + self.DF*self.stateMem[idx + 1].utility - currUtil)
 
-        # All possible moves that we can take
-        allMoves = listAllLegalMoves(currentState)
-        allMovementMoves = listAllMovementMoves(currentState)
-
         match = False
 
         bestUtil = -9999.0  # really small
@@ -508,16 +503,10 @@ class AIPlayer(Player):
                 match = self.compareStates(nextState, state)
                 # If there is a match, look at utility
                 if match:
-                    print "a match is found!"
-                    if state.utility >= bestUtil:
-                        print "changing move"
+                    if state.utility > bestUtil:
+                        print "changing move: util: ", state.utility, "bestUtil: ", bestUtil
                         bestUtil = state.utility
                         move = curMove
-
-        # Small chance of choosing a random move to potentially learn better moves
-        # if random.random() < self.greedy:
-        #     rndMoveIdx = random.randint(0, len(allMoves) - 1)
-        #     return allMoves[rndMoveIdx]
 
         # If a random move is not taken, take the best move
         return move
@@ -534,6 +523,7 @@ class AIPlayer(Player):
             for memWorkerCoords in stateFromStateMem.myWorkers:
                 if worker.coords != memWorkerCoords:
                     return False
+
         return True
 
 
@@ -544,18 +534,16 @@ class AIPlayer(Player):
 
         # the first time this method is called, the food and tunnel locations
         # need to be recorded in their respective instance variables
-        if (self.myTunnel == None):
-            self.myTunnel = getConstrList(currentState, me, (TUNNEL,))[0]
-        if (self.myFood == None):
-            foods = getConstrList(currentState, None, (FOOD,))
-            self.myFood = foods[0]
-            # find the food closest to the tunnel
-            bestDistSoFar = 1000  # i.e., infinity
-            for food in foods:
-                dist = stepsToReach(currentState, self.myTunnel.coords, food.coords)
-                if (dist < bestDistSoFar):
-                    self.myFood = food
-                    bestDistSoFar = dist
+        self.myTunnel = getConstrList(currentState, me, (TUNNEL,))[0]
+        foods = getConstrList(currentState, None, (FOOD,))
+        self.myFood = foods[0]
+        # find the food closest to the tunnel
+        bestDistSoFar = 1000  # i.e., infinity
+        for food in foods:
+            dist = stepsToReach(currentState, self.myTunnel.coords, food.coords)
+            if (dist < bestDistSoFar):
+                self.myFood = food
+                bestDistSoFar = dist
 
         # if the hasn't moved, have her move in place so she will attack
         myQueen = myInv.getQueen()
