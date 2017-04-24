@@ -344,6 +344,8 @@ class AIPlayer(Player):
     #       If setup phase 2: list of two 2-tuples of ints -> [(x1,y1), (x2,y2)]
     ##
     def getPlacement(self, currentState):
+        return self.randomPlacement(currentState)
+
         # Setup phase for placing anthill, grass, and tunnel
         # (hardcoded in for optimal chance of winning)
         if currentState.phase == SETUP_PHASE_1:
@@ -394,6 +396,47 @@ class AIPlayer(Player):
         else:
             return None
 
+
+    def randomPlacement(self, currentState):
+        numToPlace = 0
+        #implemented by students to return their next move
+        if currentState.phase == SETUP_PHASE_1:    #stuff on my side
+            numToPlace = 11
+            moves = []
+            for i in range(0, numToPlace):
+                move = None
+                while move == None:
+                    #Choose any x location
+                    x = random.randint(0, 9)
+                    #Choose any y location on your side of the board
+                    y = random.randint(0, 3)
+                    #Set the move if this space is empty
+                    if currentState.board[x][y].constr == None and (x, y) not in moves:
+                        move = (x, y)
+                        #Just need to make the space non-empty. So I threw whatever I felt like in there.
+                        currentState.board[x][y].constr == True
+                moves.append(move)
+            return moves
+        elif currentState.phase == SETUP_PHASE_2:   #stuff on foe's side
+            numToPlace = 2
+            moves = []
+            for i in range(0, numToPlace):
+                move = None
+                while move == None:
+                    #Choose any x location
+                    x = random.randint(0, 9)
+                    #Choose any y location on enemy side of the board
+                    y = random.randint(6, 9)
+                    #Set the move if this space is empty
+                    if currentState.board[x][y].constr == None and (x, y) not in moves:
+                        move = (x, y)
+                        #Just need to make the space non-empty. So I threw whatever I felt like in there.
+                        currentState.board[x][y].constr == True
+                moves.append(move)
+            return moves
+        else:
+            return [(0, 0)]
+
     ##
     # findBestMove
     #
@@ -406,28 +449,28 @@ class AIPlayer(Player):
     #
     # Return: the move with the best utility
     ##
-    def findBestMove(self, currentState):
-        # All legal moves that we can currently take
-        legalMoves = listAllMovementMoves(currentState)
-
-        # The best move to take
-        bestMove = None
-
-        # Utility of the current best move
-        utilityOfBestMove = -9999.0  # arbitrarily small
-
-        # Go through all the potential moves to find the one with the best utility
-        for move in legalMoves:
-            nextState = getNextState(currentState, move)
-            utilityOfCurMove = self.stateMem[idx].utility
-
-            if utilityOfCurMove >= utilityOfBestMove:
-                utilityOfBestMove = utilityOfCurMove
-                bestMove = move
-
-        # Todo: Maybe add randomness here
-
-        return bestMove
+    # def findBestMove(self, currentState):
+    #     # All legal moves that we can currently take
+    #     legalMoves = listAllMovementMoves(currentState)
+    #
+    #     # The best move to take
+    #     bestMove = None
+    #
+    #     # Utility of the current best move
+    #     utilityOfBestMove = -9999.0  # arbitrarily small
+    #
+    #     # Go through all the potential moves to find the one with the best utility
+    #     for move in legalMoves:
+    #         nextState = getNextState(currentState, move)
+    #         utilityOfCurMove = self.stateMem[idx].utility
+    #
+    #         if utilityOfCurMove >= utilityOfBestMove:
+    #             utilityOfBestMove = utilityOfCurMove
+    #             bestMove = move
+    #
+    #     # Todo: Maybe add randomness here
+    #
+    #     return bestMove
 
     ##
     # getMove
@@ -456,12 +499,13 @@ class AIPlayer(Player):
         allMovementMoves = listAllMovementMoves(currentState)
 
         # Small chance of choosing a random move to potentially learn better moves
-        if random.random() < self.greedy:
-            rndMoveIdx = random.randint(0, len(allMoves) - 1)
-            return allMoves[rndMoveIdx]
+        # if random.random() < self.greedy:
+        #     rndMoveIdx = random.randint(0, len(allMoves) - 1)
+        #     return allMoves[rndMoveIdx]
 
         # Default move to take is to gather food
         move = self.gatherFood(currentState)
+
         # rndMoveIdx = random.randint(0, len(allMoves) - 1)
         # move = allMoves[rndMoveIdx]
 
@@ -493,23 +537,24 @@ class AIPlayer(Player):
 
         bestUtil = -9999.0  # really small
 
-        # Compare the state of the move and the states in the stateMem to see if there's a match
-        for curMove in allMovementMoves:
-            # The next state if we use the move
-            nextState = getNextState(currentState, curMove)
-
-            # See if the state matches in terms of ant coords and food amounts
-            for state in self.stateMem:
-                match = self.compareStates(nextState, state)
-                # If there is a match, look at utility
-                if match:
-                    if state.utility > bestUtil:
-                        print "changing move: util: ", state.utility, "bestUtil: ", bestUtil
-                        bestUtil = state.utility
-                        move = curMove
+        # # Compare the state of the move and the states in the stateMem to see if there's a match
+        # for curMove in allMovementMoves:
+        #     # The next state if we use the move
+        #     nextState = getNextState(currentState, curMove)
+        #
+        #     # See if the state matches in terms of ant coords and food amounts
+        #     for state in self.stateMem:
+        #         match = self.compareStates(nextState, state)
+        #         # If there is a match, look at utility
+        #         if match:
+        #             if state.utility > bestUtil:
+        #                 print "changing move: util: ", state.utility, "bestUtil: ", bestUtil
+        #                 bestUtil = state.utility
+        #                 move = curMove
 
         # If a random move is not taken, take the best move
         return move
+
 
     def compareStates(self, stateFromMove, stateFromStateMem):
         me = stateFromMove.whoseTurn
@@ -534,9 +579,25 @@ class AIPlayer(Player):
 
         # the first time this method is called, the food and tunnel locations
         # need to be recorded in their respective instance variables
-        self.myTunnel = getConstrList(currentState, me, (TUNNEL,))[0]
         foods = getConstrList(currentState, None, (FOOD,))
         self.myFood = foods[0]
+        self.myTunnel = getConstrList(currentState, me, (TUNNEL,))[0]
+        self.myAnthill = getConstrList(currentState, me, (ANTHILL,))[0]
+
+        # Build another worker if we ran out
+        if len(getAntList(currentState, me, (WORKER,))) < 1 and myInv.foodCount >= 2:
+
+            # Try to move the queen off the anthill
+            if not myInv.getQueen().hasMoved:
+                # Get a movement path for the queen
+                path = listAllMovementPaths(currentState, myInv.getQueen().coords, UNIT_STATS[QUEEN][MOVEMENT])[0]
+                if path is not None:
+                    return Move(MOVE_ANT, path, None)
+
+            # Try to build an ant
+            if getAntAt(currentState, self.myAnthill.coords) == None:
+                return Move(BUILD, [self.myAnthill.coords], WORKER)
+
         # find the food closest to the tunnel
         bestDistSoFar = 1000  # i.e., infinity
         for food in foods:
@@ -618,6 +679,7 @@ class AIPlayer(Player):
 
         self.alpha = 1.0 / (1.0 + (self.numGamesPlayed / 100.0) * (self.numGamesPlayed / 100.0))
 
+
 ##
 # calcAntMove
 #
@@ -658,7 +720,6 @@ def calcAntMove(currentState, antToMove, endDestination, amountOfMovement):
                 break
     # Returns the path for the ant to take
     return path
-
 
 
 ###

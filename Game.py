@@ -1639,6 +1639,7 @@ class Game(object):
     def checkBoxClickedCallback(self, index):
         self.players[index][1] = ACTIVE if self.players[index][1] == INACTIVE else INACTIVE
 
+
     ##
     #submitClickedCallback
     #Description: Responds to a user clicking on the submit button when selecting AIs
