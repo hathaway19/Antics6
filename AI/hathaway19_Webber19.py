@@ -80,8 +80,6 @@ class AIPlayer(Player):
         # Load games from our file
         self.loadStates()
 
-        self.numOfTurns = 0
-
     ###
     #   consolidateState
     #
@@ -498,8 +496,8 @@ class AIPlayer(Player):
         # print "stateMem: ", len(self.stateMem)
         # print "all moves: ", len(allMoves)
         #
-        # bestUtil = -9999.0 #really small
-        # bestMove = None
+        bestUtil = -9999.0 #really small
+
         # curStateIdx = len(self.stateMem) - len(allMoves)
         #
         # if curStateIdx < 0:
@@ -623,9 +621,11 @@ class AIPlayer(Player):
         # At the end of each game, save our memory into a the xml file
         self.saveStates()
 
-        self.numOfTurns = 0
         # Increment our games played and alpha value
         self.numGamesPlayed += 1
+
+        # Amount of random moves goes down over time
+        self.greedy -= self.numGamesPlayed * 0.001
         self.alpha = 1.0 / (1.0 + (self.numGamesPlayed / 100.0) * (self.numGamesPlayed / 100.0))
 
 ##
