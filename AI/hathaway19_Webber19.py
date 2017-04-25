@@ -50,6 +50,7 @@ class AIPlayer(Player):
         self.greedy = 0.10
         self.numGamesPlayed = 0
         self.numTrace = 5
+        self.stateStartIdx = 0
 
         # Book keeping for getting the initial state
         self.initState = True
@@ -194,6 +195,8 @@ class AIPlayer(Player):
             # We can now save the state in RAM
             self.stateMem.append(remState)
 
+        self.stateStartIdx = len(self.stateMem)
+
     def textToCoord(self, text):
         text = str(text)
 
@@ -236,7 +239,7 @@ class AIPlayer(Player):
     def saveStates(self):
 
         # Wipe our our old memory
-        self.clearMemoryFile()
+        #self.clearMemoryFile()
 
         # Parse our file
         tree = None
@@ -251,8 +254,9 @@ class AIPlayer(Player):
         # Write all of our data to our history
         root = tree.getroot()
 
-        for tinyState in self.stateMem:
+        for idx in range(self.stateStartIdx, len(self.stateMem)):
 
+            tinyState = self.stateMem[idx]
             state = ET.SubElement(root, self.GAMESTATE)
 
             # Turn
@@ -537,20 +541,20 @@ class AIPlayer(Player):
 
         bestUtil = -9999.0  # really small
 
-        # # Compare the state of the move and the states in the stateMem to see if there's a match
-        # for curMove in allMovementMoves:
-        #     # The next state if we use the move
-        #     nextState = getNextState(currentState, curMove)
-        #
-        #     # See if the state matches in terms of ant coords and food amounts
-        #     for state in self.stateMem:
-        #         match = self.compareStates(nextState, state)
-        #         # If there is a match, look at utility
-        #         if match:
-        #             if state.utility > bestUtil:
-        #                 print "changing move: util: ", state.utility, "bestUtil: ", bestUtil
-        #                 bestUtil = state.utility
-        #                 move = curMove
+        # Compare the state of the move and the states in the stateMem to see if there's a match
+        for curMove in allMovementMoves:
+            # The next state if we use the move
+            nextState = getNextState(currentState, curMove)
+
+            # See if the state matches in terms of ant coords and food amounts
+            for state in self.stateMem:
+                match = self.compareStates(nextState, state)
+                # If there is a match, look at utility
+                if match:
+                    if state.utility > bestUtil:
+                        print "changing move: util: ", state.utility, "bestUtil: ", bestUtil
+                        bestUtil = state.utility
+                        move = curMove
 
         # If a random move is not taken, take the best move
         return move
@@ -560,14 +564,26 @@ class AIPlayer(Player):
         me = stateFromMove.whoseTurn
         my_inv = stateFromMove.inventories[me]
         my_workers = getAntList(stateFromMove, me, (WORKER,))
-
-        if my_inv.foodCount != stateFromStateMem.myFoodScore:
-            return False
-
+        myWorkerCoords = []
         for worker in my_workers:
-            for memWorkerCoords in stateFromStateMem.myWorkers:
-                if worker.coords != memWorkerCoords:
-                    return False
+            myWorkerCoords.append(worker.coords)
+
+        foodList = getConstrList(stateFromMove, None, (FOOD,))
+        myFood = []
+        for food in foodList:
+            if food.coords[1] >= 6:
+                myFood.append(food.coords)
+
+        # if my_inv.foodCount != stateFromStateMem.myFoodScore:
+        #     return False
+
+        for foodCoord in myFood:
+            if foodCoord not in stateFromStateMem.myFood:
+                return False
+
+        for worker in myWorkerCoords:
+            if worker not in stateFromStateMem.myWorkers:
+                return False
 
         return True
 
